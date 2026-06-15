@@ -1,0 +1,7 @@
+GITHUB_CLIENT_ID     = "Ov23liIJFjLXlFeKWlqV"
+GITHUB_CLIENT_SECRET = "ad302c3c779f65ed7e6d02eb05311bfc2f3ac60d"
+SECRET_KEY           = "ronin"
+GITHUB_AUTHORIZE_URL = "https://github.com/login/oauth/authorize"
+GITHUB_TOKEN_URL     = "https://github.com/login/oauth/access_token"
+GITHUB_API_BASE      = "https://api.github.com"
+GITHUB_SCOPE         = "read:user repo"

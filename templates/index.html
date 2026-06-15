@@ -6,230 +6,242 @@
 <title>SBOM Scanner — Vulnerability Dashboard</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
+  * { margin:0; padding:0; box-sizing:border-box; }
   :root {
-    --bg: #0d1117;
-    --surface: #161b22;
-    --surface2: #1c2128;
-    --border: #30363d;
-    --border2: #21262d;
-    --text: #e6edf3;
-    --text2: #8b949e;
-    --text3: #6e7681;
-    --blue: #388bfd;
-    --blue-bg: #0c2d6b;
-    --green: #3fb950;
-    --green-bg: #0f3520;
-    --amber: #d29922;
-    --amber-bg: #3d2b00;
-    --red: #f85149;
-    --red-bg: #4d1117;
-    --purple: #bc8cff;
-    --purple-bg: #2d1f6e;
-    --critical: #ff7b72;
-    --critical-bg: #5d1a17;
-    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-    --mono: 'SF Mono', 'Fira Code', Consolas, monospace;
+    --bg:#0d1117; --surface:#161b22; --surface2:#1c2128;
+    --border:#30363d; --border2:#21262d;
+    --text:#e6edf3; --text2:#8b949e; --text3:#6e7681;
+    --blue:#388bfd; --blue-bg:#0c2d6b;
+    --green:#3fb950; --green-bg:#0f3520;
+    --amber:#d29922; --amber-bg:#3d2b00;
+    --red:#f85149; --red-bg:#4d1117;
+    --purple:#bc8cff; --purple-bg:#2d1f6e;
+    --critical:#ff7b72; --critical-bg:#5d1a17;
+    --font:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+    --mono:'SF Mono','Fira Code',Consolas,monospace;
   }
+  body { font-family:var(--font); background:var(--bg); color:var(--text); min-height:100vh; }
 
-  body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; }
-
-  /* ── Top nav ── */
-  .nav { 
-    display: flex; align-items: center; gap: 16px;
-    padding: 14px 28px; background: var(--surface);
-    border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100;
+  /* nav */
+  .nav {
+    display:flex; align-items:center; gap:14px; padding:12px 28px;
+    background:var(--surface); border-bottom:1px solid var(--border);
+    position:sticky; top:0; z-index:100;
   }
-  .nav-logo { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; }
-  .nav-logo svg { width: 24px; height: 24px; }
-  .nav-badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; background: var(--blue-bg); color: var(--blue); font-weight: 500; }
-  .nav-spacer { flex: 1; }
-  .nav-status { font-size: 12px; color: var(--text3); }
+  .nav-logo { display:flex; align-items:center; gap:10px; font-weight:600; font-size:15px; }
+  .nav-logo svg { width:22px; height:22px; }
+  .nav-badge { font-size:11px; padding:2px 8px; border-radius:20px; background:var(--blue-bg); color:var(--blue); font-weight:500; }
+  .nav-spacer { flex:1; }
+  .nav-status { font-size:12px; color:var(--text3); }
 
-  .tree-row { display:flex; align-items:center; gap:6px; padding:1px 0; cursor:default; border-radius:4px; }
-  .tree-row:hover { background:rgba(255,255,255,0.03); }
-  .tree-dir  { color: #388bfd; }
-  .tree-file { color: #8b949e; }
-  .tree-icon { font-size:13px; width:16px; text-align:center; flex-shrink:0; }
-  .tree-toggle { cursor:pointer; user-select:none; width:14px; text-align:center; color:var(--text3); flex-shrink:0; }
-  .tree-children { overflow:hidden; transition:max-height 0.2s ease; }
-  /* ── Layout ── */
-  .page { max-width: 1200px; margin: 0 auto; padding: 28px; }
+  /* auth */
+  .gh-btn {
+    display:inline-flex; align-items:center; gap:8px; padding:7px 14px;
+    background:#238636; border-radius:6px; color:#fff; text-decoration:none;
+    font-size:13px; font-weight:600; transition:opacity .15s; white-space:nowrap;
+  }
+  .gh-btn:hover { opacity:.85; }
+  .user-chip { display:none; align-items:center; gap:8px; }
+  .user-chip img { width:26px; height:26px; border-radius:50%; border:1px solid var(--border); }
+  .user-chip .uname { font-size:13px; color:var(--text2); }
+  .signout-btn {
+    font-size:12px; color:var(--text3); text-decoration:none;
+    padding:3px 10px; border:1px solid var(--border); border-radius:6px;
+    transition:all .15s;
+  }
+  .signout-btn:hover { border-color:var(--red); color:var(--red); }
 
-  /* ── Scan input ── */
+  /* layout */
+  .page { max-width:1200px; margin:0 auto; padding:28px; }
+
+  /* scan box */
   .scan-box {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; padding: 24px 28px; margin-bottom: 28px;
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:10px; padding:22px 26px; margin-bottom:26px;
   }
-  .scan-box h2 { font-size: 14px; font-weight: 600; color: var(--text2); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 14px; }
-  .scan-row { display: flex; gap: 10px; align-items: center; }
+  .scan-box h2 { font-size:13px; font-weight:600; color:var(--text3); letter-spacing:.06em; text-transform:uppercase; margin-bottom:14px; }
+  .scan-row { display:flex; gap:10px; align-items:center; }
   .scan-input {
-    flex: 1; background: var(--bg); border: 1px solid var(--border);
-    color: var(--text); padding: 10px 14px; border-radius: 6px; font-size: 14px;
-    font-family: var(--mono); outline: none; transition: border-color 0.15s;
+    flex:1; background:var(--bg); border:1px solid var(--border);
+    color:var(--text); padding:10px 14px; border-radius:6px; font-size:14px;
+    font-family:var(--mono); outline:none; transition:border-color .15s;
   }
-  .scan-input:focus { border-color: var(--blue); }
-  .scan-input::placeholder { color: var(--text3); }
+  .scan-input:focus { border-color:var(--blue); }
+  .scan-input::placeholder { color:var(--text3); }
   .scan-btn {
-    padding: 10px 20px; background: var(--blue); border: none; border-radius: 6px;
-    color: #fff; font-size: 14px; font-weight: 600; cursor: pointer;
-    transition: opacity 0.15s; white-space: nowrap; display: flex; align-items: center; gap: 6px;
+    padding:10px 18px; background:var(--blue); border:none; border-radius:6px;
+    color:#fff; font-size:14px; font-weight:600; cursor:pointer;
+    transition:opacity .15s; white-space:nowrap; display:flex; align-items:center; gap:6px;
   }
-  .scan-btn:hover { opacity: 0.88; }
-  .scan-btn:disabled { opacity: 0.45; cursor: default; }
-  .scan-note { font-size: 12px; color: var(--text3); margin-top: 10px; }
+  .scan-btn:hover { opacity:.88; }
+  .scan-btn:disabled { opacity:.45; cursor:default; }
+  .scan-note { font-size:12px; color:var(--text3); margin-top:10px; }
 
-  /* ── Progress ── */
-  .progress-bar-wrap { height: 3px; background: var(--border); border-radius: 2px; margin-top: 14px; overflow: hidden; display: none; }
-  .progress-bar { height: 100%; background: var(--blue); border-radius: 2px; width: 0; transition: width 0.4s ease; }
-
-  /* ── Summary cards ── */
-  .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: 12px; margin-bottom: 28px; }
-  .s-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; padding: 16px 18px;
+  /* repo selector */
+  .repo-section { margin-bottom:14px; }
+  .repo-row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .repo-select {
+    flex:1; min-width:220px; background:var(--bg); border:1px solid var(--border);
+    color:var(--text); padding:10px 14px; border-radius:6px; font-size:13px;
+    font-family:var(--mono); outline:none; cursor:pointer;
   }
-  .s-card .label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
-  .s-card .value { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
-  .s-card.critical .value { color: var(--critical); }
-  .s-card.high .value { color: var(--red); }
-  .s-card.medium .value { color: var(--amber); }
-  .s-card.low .value { color: var(--green); }
-  .s-card.info .value { color: var(--blue); }
-  .s-card.purple .value { color: var(--purple); }
+  .repo-select:focus { border-color:var(--blue); }
+  .divider { display:flex; align-items:center; gap:10px; margin:14px 0; }
+  .divider-line { flex:1; height:1px; background:var(--border); }
+  .divider-txt { font-size:12px; color:var(--text3); white-space:nowrap; }
 
-  /* ── Section layout ── */
-  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
-  .full-col { margin-bottom: 20px; }
-  @media(max-width: 768px) { .two-col { grid-template-columns: 1fr; } }
+  /* progress */
+  .progress-bar-wrap { height:3px; background:var(--border); border-radius:2px; margin-top:14px; overflow:hidden; display:none; }
+  .progress-bar { height:100%; background:var(--blue); border-radius:2px; width:0; transition:width .4s ease; }
 
-  /* ── Panel ── */
-  .panel {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
-  }
-  .panel-head {
-    padding: 14px 18px; border-bottom: 1px solid var(--border2);
-    display: flex; align-items: center; justify-content: space-between;
-  }
-  .panel-head h3 { font-size: 14px; font-weight: 600; }
-  .panel-head .count { font-size: 12px; color: var(--text3); background: var(--surface2); padding: 2px 8px; border-radius: 12px; }
-  .panel-body { padding: 0; }
+  /* summary cards */
+  .summary-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:26px; }
+  .s-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px 18px; }
+  .s-card .label { font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px; }
+  .s-card .value { font-size:28px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .s-card.critical .value { color:var(--critical); }
+  .s-card.high .value { color:var(--red); }
+  .s-card.medium .value { color:var(--amber); }
+  .s-card.low .value { color:var(--green); }
+  .s-card.info .value { color:var(--blue); }
+  .s-card.purple .value { color:var(--purple); }
 
-  /* ── Chart ── */
-  .chart-wrap { padding: 20px; }
-  .chart-container { position: relative; height: 200px; }
+  /* panels */
+  .two-col { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px; }
+  .full-col { margin-bottom:20px; }
+  @media(max-width:768px){ .two-col { grid-template-columns:1fr; } }
+  .panel { background:var(--surface); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+  .panel-head { padding:13px 18px; border-bottom:1px solid var(--border2); display:flex; align-items:center; justify-content:space-between; }
+  .panel-head h3 { font-size:14px; font-weight:600; }
+  .count { font-size:12px; color:var(--text3); background:var(--surface2); padding:2px 8px; border-radius:12px; }
 
-  /* ── Tables ── */
-  .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  .data-table th {
-    padding: 10px 14px; text-align: left; font-size: 11px; color: var(--text3);
-    font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase;
-    border-bottom: 1px solid var(--border2); background: var(--surface2);
-    white-space: nowrap;
-  }
-  .data-table td { padding: 11px 14px; border-bottom: 1px solid var(--border2); vertical-align: middle; }
-  .data-table tr:last-child td { border-bottom: none; }
-  .data-table tr:hover td { background: rgba(255,255,255,0.02); }
-  .data-table .name-cell { font-family: var(--mono); font-size: 12px; color: var(--blue); }
-  .data-table .version-cell { font-family: var(--mono); font-size: 12px; color: var(--text2); }
-  .data-table .summary-cell { color: var(--text2); max-width: 320px; }
-  .data-table .purl-cell { font-family: var(--mono); font-size: 11px; color: var(--text3); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* charts */
+  .chart-wrap { padding:20px; }
+  .chart-container { position:relative; height:200px; }
 
-  /* ── Badges ── */
-  .badge {
-    display: inline-flex; align-items: center; gap: 4px;
-    padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; white-space: nowrap;
-  }
-  .badge.critical { background: var(--critical-bg); color: var(--critical); }
-  .badge.high { background: var(--red-bg); color: var(--red); }
-  .badge.medium { background: var(--amber-bg); color: var(--amber); }
-  .badge.low { background: var(--green-bg); color: var(--green); }
-  .badge.unknown { background: var(--surface2); color: var(--text3); }
-  .badge.info { background: var(--blue-bg); color: var(--blue); }
-  .badge.risk-low { background: var(--green-bg); color: var(--green); }
-  .badge.risk-medium { background: var(--amber-bg); color: var(--amber); }
-  .badge.risk-high { background: var(--red-bg); color: var(--red); }
-  .badge.eco { background: var(--purple-bg); color: var(--purple); }
+  /* tables */
+  .data-table { width:100%; border-collapse:collapse; font-size:13px; }
+  .data-table th { padding:10px 14px; text-align:left; font-size:11px; color:var(--text3); font-weight:500; letter-spacing:.04em; text-transform:uppercase; border-bottom:1px solid var(--border2); background:var(--surface2); white-space:nowrap; }
+  .data-table td { padding:11px 14px; border-bottom:1px solid var(--border2); vertical-align:middle; }
+  .data-table tr:last-child td { border-bottom:none; }
+  .data-table tr:hover td { background:rgba(255,255,255,.02); }
+  .data-table .name-cell { font-family:var(--mono); font-size:12px; color:var(--blue); }
+  .data-table .version-cell { font-family:var(--mono); font-size:12px; color:var(--text2); }
+  .data-table .summary-cell { color:var(--text2); max-width:320px; }
+  .data-table .purl-cell { font-family:var(--mono); font-size:11px; color:var(--text3); max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
-  /* ── Filter tabs ── */
-  .filter-tabs { display: flex; gap: 4px; padding: 12px 14px; border-bottom: 1px solid var(--border2); flex-wrap: wrap; }
-  .tab {
-    padding: 4px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;
-    border: 1px solid transparent; transition: all 0.15s; color: var(--text2);
-  }
-  .tab:hover { background: var(--surface2); }
-  .tab.active { background: var(--surface2); border-color: var(--border); color: var(--text); }
-  .tab.tab-critical.active { border-color: var(--critical); color: var(--critical); }
-  .tab.tab-high.active { border-color: var(--red); color: var(--red); }
-  .tab.tab-medium.active { border-color: var(--amber); color: var(--amber); }
+  /* badges */
+  .badge { display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:600; white-space:nowrap; }
+  .badge.critical { background:var(--critical-bg); color:var(--critical); }
+  .badge.high { background:var(--red-bg); color:var(--red); }
+  .badge.medium { background:var(--amber-bg); color:var(--amber); }
+  .badge.low { background:var(--green-bg); color:var(--green); }
+  .badge.unknown { background:var(--surface2); color:var(--text3); }
+  .badge.eco { background:var(--purple-bg); color:var(--purple); }
+  .badge.risk-low { background:var(--green-bg); color:var(--green); }
+  .badge.risk-medium { background:var(--amber-bg); color:var(--amber); }
+  .badge.risk-high { background:var(--red-bg); color:var(--red); }
 
-  /* ── Empty / loading / error states ── */
-  .empty-state { padding: 48px 20px; text-align: center; color: var(--text3); }
-  .empty-state svg { opacity: 0.3; margin-bottom: 12px; }
-  .empty-state p { font-size: 14px; }
-  .loading-state { padding: 32px 20px; text-align: center; color: var(--text3); font-size: 14px; }
-  .error-box { background: var(--red-bg); border: 1px solid var(--red); border-radius: 8px; padding: 14px 18px; color: var(--red); font-size: 13px; margin-bottom: 20px; display: none; }
+  /* filter tabs */
+  .filter-tabs { display:flex; gap:4px; padding:12px 14px; border-bottom:1px solid var(--border2); flex-wrap:wrap; }
+  .tab { padding:4px 12px; border-radius:6px; font-size:12px; cursor:pointer; border:1px solid transparent; transition:all .15s; color:var(--text2); }
+  .tab:hover { background:var(--surface2); }
+  .tab.active { background:var(--surface2); border-color:var(--border); color:var(--text); }
+  .tab.tab-critical.active { border-color:var(--critical); color:var(--critical); }
+  .tab.tab-high.active { border-color:var(--red); color:var(--red); }
+  .tab.tab-medium.active { border-color:var(--amber); color:var(--amber); }
 
-  /* ── Scrollable table body ── */
-  .table-scroll { max-height: 380px; overflow-y: auto; }
-  .table-scroll::-webkit-scrollbar { width: 6px; }
-  .table-scroll::-webkit-scrollbar-track { background: transparent; }
-  .table-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  /* tree */
+  .tree-row { display:flex; align-items:center; gap:6px; padding:1px 0; border-radius:4px; }
+  .tree-row:hover { background:rgba(255,255,255,.03); }
+  .tree-dir  { color:var(--blue); font-family:var(--mono); font-size:13px; }
+  .tree-file { color:var(--text2); font-family:var(--mono); font-size:13px; }
+  .tree-toggle { cursor:pointer; user-select:none; width:14px; text-align:center; color:var(--text3); flex-shrink:0; font-size:11px; }
+  .tree-children { overflow:hidden; transition:max-height .2s ease; }
 
-  /* ── CVE link ── */
-  .cve-link { color: var(--blue); text-decoration: none; font-family: var(--mono); font-size: 12px; }
-  .cve-link:hover { text-decoration: underline; }
-
-  /* ── Export btn ── */
-  .export-btn {
-    padding: 6px 14px; background: transparent; border: 1px solid var(--border);
-    border-radius: 6px; color: var(--text2); font-size: 12px; cursor: pointer;
-    transition: all 0.15s;
-  }
-  .export-btn:hover { border-color: var(--blue); color: var(--blue); }
-
-  /* ── Ecosystem pills row ── */
-  .eco-row { display: flex; gap: 6px; flex-wrap: wrap; padding: 12px 18px; border-bottom: 1px solid var(--border2); }
-
-  /* ── Spinner ── */
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.2); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; display: inline-block; }
-
-  /* ── Pulse dot ── */
-  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
-  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-  .dot.green { background: var(--green); animation: pulse 2s infinite; }
-  .dot.gray { background: var(--text3); }
+  /* misc */
+  .table-scroll { max-height:380px; overflow-y:auto; }
+  .table-scroll::-webkit-scrollbar { width:6px; }
+  .table-scroll::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+  .error-box { background:var(--red-bg); border:1px solid var(--red); border-radius:8px; padding:14px 18px; color:var(--red); font-size:13px; margin-bottom:20px; display:none; }
+  .eco-row { display:flex; gap:6px; flex-wrap:wrap; padding:12px 18px; border-bottom:1px solid var(--border2); }
+  .export-btn { padding:6px 14px; background:transparent; border:1px solid var(--border); border-radius:6px; color:var(--text2); font-size:12px; cursor:pointer; transition:all .15s; }
+  .export-btn:hover { border-color:var(--blue); color:var(--blue); }
+  .cve-link { color:var(--blue); text-decoration:none; font-family:var(--mono); font-size:12px; }
+  .cve-link:hover { text-decoration:underline; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .spinner { width:14px; height:14px; border:2px solid rgba(255,255,255,.2); border-top-color:#fff; border-radius:50%; animation:spin .6s linear infinite; display:inline-block; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .dot { width:8px; height:8px; border-radius:50%; display:inline-block; }
+  .dot.green { background:var(--green); animation:pulse 2s infinite; }
+  .dot.gray  { background:var(--text3); }
 </style>
 </head>
 <body>
 
+<!-- NAV -->
 <nav class="nav">
   <div class="nav-logo">
     <svg viewBox="0 0 24 24" fill="none" stroke="#388bfd" stroke-width="1.8">
-      <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+      <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+      <path d="M2 17l10 5 10-5"/>
+      <path d="M2 12l10 5 10-5"/>
     </svg>
     SBOM Scanner
   </div>
   <span class="nav-badge">POC v1.0</span>
   <div class="nav-spacer"></div>
-  <span class="nav-status" id="nav-status">
-    <span class="dot gray"></span>&nbsp; Ready
+
+  <!-- logged out -->
+  <a class="gh-btn" href="/auth/github" id="btn-login">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
+    </svg>
+    Sign in with GitHub
+  </a>
+
+  <!-- logged in -->
+  <div class="user-chip" id="user-chip">
+    <img id="user-avatar" src="" alt="avatar"/>
+    <span class="uname" id="user-name"></span>
+    <a class="signout-btn" href="/auth/logout">Sign out</a>
+  </div>
+
+  <span class="nav-status" id="nav-status" style="margin-left:10px">
+    <span class="dot gray"></span>&nbsp;Ready
   </span>
 </nav>
 
+<!-- PAGE -->
 <div class="page">
 
-  <!-- Scan Input -->
+  <!-- SCAN BOX -->
   <div class="scan-box">
     <h2>Scan a project</h2>
+
+    <!-- GitHub repo section — shown after login -->
+    <div class="repo-section" id="repo-section" style="display:none">
+      <div class="repo-row">
+        <select class="repo-select" id="repoSelect">
+          <option value="">— loading repositories… —</option>
+        </select>
+        <button class="scan-btn" id="scanRepoBtn" onclick="scanRepo()">
+          <span id="scan-repo-txt">Scan repo</span>
+        </button>
+      </div>
+      <div class="divider">
+        <div class="divider-line"></div>
+        <span class="divider-txt">or scan a local path</span>
+        <div class="divider-line"></div>
+      </div>
+    </div>
+
+    <!-- Local path — always visible -->
     <div class="scan-row">
       <input class="scan-input" type="text" id="pathInput"
-        placeholder="/absolute/path/to/your/project"
-        value=""/>
+        placeholder="/absolute/path/to/your/project"/>
       <button class="scan-btn" id="scanBtn" onclick="startScan()">
-        <span id="scan-btn-text">Scan</span>
+        <span id="scan-btn-txt">Scan</span>
       </button>
     </div>
     <p class="scan-note">Supports: <code>requirements.txt</code> · <code>package.json</code> · <code>go.mod</code> · <code>Cargo.toml</code> · <code>pom.xml</code> · <code>Gemfile</code></p>
@@ -240,51 +252,29 @@
 
   <div class="error-box" id="errorBox"></div>
 
-  <!-- Summary Cards -->
+  <!-- SUMMARY CARDS -->
   <div class="summary-grid" id="summaryGrid" style="display:none">
-    <div class="s-card info">
-      <div class="label">Components</div>
-      <div class="value" id="s-total">0</div>
-    </div>
-    <div class="s-card critical">
-      <div class="label">Critical</div>
-      <div class="value" id="s-critical">0</div>
-    </div>
-    <div class="s-card high">
-      <div class="label">High</div>
-      <div class="value" id="s-high">0</div>
-    </div>
-    <div class="s-card medium">
-      <div class="label">Medium</div>
-      <div class="value" id="s-medium">0</div>
-    </div>
-    <div class="s-card low">
-      <div class="label">Low</div>
-      <div class="value" id="s-low">0</div>
-    </div>
-    <div class="s-card purple">
-      <div class="label">License Issues</div>
-      <div class="value" id="s-license">0</div>
-    </div>
+    <div class="s-card info">    <div class="label">Components</div><div class="value" id="s-total">0</div></div>
+    <div class="s-card critical"><div class="label">Critical</div>   <div class="value" id="s-critical">0</div></div>
+    <div class="s-card high">   <div class="label">High</div>       <div class="value" id="s-high">0</div></div>
+    <div class="s-card medium"> <div class="label">Medium</div>     <div class="value" id="s-medium">0</div></div>
+    <div class="s-card low">    <div class="label">Low</div>        <div class="value" id="s-low">0</div></div>
+    <div class="s-card purple"> <div class="label">License Issues</div><div class="value" id="s-license">0</div></div>
   </div>
 
-  <!-- Charts Row -->
+  <!-- CHARTS -->
   <div class="two-col" id="chartsRow" style="display:none">
     <div class="panel">
       <div class="panel-head"><h3>Severity distribution</h3></div>
-      <div class="chart-wrap">
-        <div class="chart-container"><canvas id="severityChart" role="img" aria-label="Vulnerability severity distribution chart"></canvas></div>
-      </div>
+      <div class="chart-wrap"><div class="chart-container"><canvas id="severityChart"></canvas></div></div>
     </div>
     <div class="panel">
       <div class="panel-head"><h3>Ecosystems detected</h3></div>
-      <div class="chart-wrap">
-        <div class="chart-container"><canvas id="ecoChart" role="img" aria-label="Ecosystems breakdown chart"></canvas></div>
-      </div>
+      <div class="chart-wrap"><div class="chart-container"><canvas id="ecoChart"></canvas></div></div>
     </div>
   </div>
 
-  <!-- Vulnerabilities Table -->
+  <!-- VULNERABILITIES -->
   <div class="panel full-col" id="vulnPanel" style="display:none">
     <div class="panel-head">
       <h3>Vulnerabilities</h3>
@@ -294,288 +284,309 @@
       </div>
     </div>
     <div class="filter-tabs" id="vulnTabs">
-      <span class="tab active" data-sev="ALL" onclick="filterVulns(this)">All</span>
+      <span class="tab active" data-sev="ALL"      onclick="filterVulns(this)">All</span>
       <span class="tab tab-critical" data-sev="CRITICAL" onclick="filterVulns(this)">Critical</span>
-      <span class="tab tab-high" data-sev="HIGH" onclick="filterVulns(this)">High</span>
-      <span class="tab tab-medium" data-sev="MEDIUM" onclick="filterVulns(this)">Medium</span>
-      <span class="tab" data-sev="LOW" onclick="filterVulns(this)">Low</span>
+      <span class="tab tab-high"     data-sev="HIGH"     onclick="filterVulns(this)">High</span>
+      <span class="tab tab-medium"   data-sev="MEDIUM"   onclick="filterVulns(this)">Medium</span>
+      <span class="tab"              data-sev="LOW"      onclick="filterVulns(this)">Low</span>
     </div>
     <div class="table-scroll">
       <table class="data-table">
-        <thead>
-          <tr>
-            <th>CVE / ID</th>
-            <th>Severity</th>
-            <th>Component</th>
-            <th>Version</th>
-            <th>Summary</th>
-            <th>Ecosystem</th>
-          </tr>
-        </thead>
+        <thead><tr><th>CVE / ID</th><th>Severity</th><th>Component</th><th>Version</th><th>Summary</th><th>Ecosystem</th></tr></thead>
         <tbody id="vulnBody"></tbody>
       </table>
     </div>
   </div>
 
-  <!-- Components Table -->
+  <!-- COMPONENTS -->
   <div class="panel full-col" id="compPanel" style="display:none">
-    <div class="panel-head">
-      <h3>Component inventory</h3>
-      <span class="count" id="comp-count">0</span>
-    </div>
+    <div class="panel-head"><h3>Component inventory</h3><span class="count" id="comp-count">0</span></div>
     <div id="ecoFilters" class="eco-row"></div>
     <div class="table-scroll">
       <table class="data-table">
-        <thead>
-          <tr>
-            <th>Package</th>
-            <th>Version</th>
-            <th>Ecosystem</th>
-            <th>Package URL</th>
-          </tr>
-        </thead>
+        <thead><tr><th>Package</th><th>Version</th><th>Ecosystem</th><th>Package URL</th></tr></thead>
         <tbody id="compBody"></tbody>
       </table>
     </div>
   </div>
 
-  <!-- Licenses Table -->
+  <!-- LICENSES -->
   <div class="panel full-col" id="licPanel" style="display:none">
-    <div class="panel-head">
-      <h3>License compliance</h3>
-      <span class="count" id="lic-count">0</span>
-    </div>
+    <div class="panel-head"><h3>License compliance</h3><span class="count" id="lic-count">0</span></div>
     <div class="table-scroll">
       <table class="data-table">
-        <thead>
-          <tr>
-            <th>Component / File</th>
-            <th>License</th>
-            <th>Risk</th>
-          </tr>
-        </thead>
+        <thead><tr><th>Component / File</th><th>License</th><th>Risk</th></tr></thead>
         <tbody id="licBody"></tbody>
       </table>
     </div>
   </div>
 
-  <!-- Project Structure -->
-<div class="panel full-col" id="treePanel" style="display:none">
-  <div class="panel-head">
-    <h3>Project structure</h3>
-    <span class="count" id="tree-count">0 files</span>
+  <!-- PROJECT STRUCTURE -->
+  <div class="panel full-col" id="treePanel" style="display:none">
+    <div class="panel-head">
+      <h3>Project structure</h3>
+      <span class="count" id="tree-count">0 files</span>
+    </div>
+    <div id="treeBody" style="padding:16px 20px;max-height:420px;overflow-y:auto;line-height:1.8"></div>
   </div>
-  <div style="padding:16px 20px;font-family:var(--mono);font-size:13px;line-height:1.8;max-height:420px;overflow-y:auto" id="treeBody"></div>
-</div>
 
-</div>
+</div><!-- /page -->
 
 <script>
 let scanData = null;
 let sevChart = null;
 let ecoChartInst = null;
 let currentSevFilter = "ALL";
+let currentRepo = null;
 
-function startScan() {
-  const path = document.getElementById("pathInput").value.trim();
-  if (!path) { showError("Please enter a project path."); return; }
+// ── Auth init ────────────────────────────────────────────────
+async function initAuth() {
+  try {
+    const resp = await fetch("/auth/user");
+    const data = await resp.json();
+    if (data.authenticated) {
+      document.getElementById("btn-login").style.display  = "none";
+      const chip = document.getElementById("user-chip");
+      chip.style.display = "flex";
+      document.getElementById("user-avatar").src = data.user.avatar_url;
+      document.getElementById("user-name").textContent   = data.user.name || data.user.login;
+      document.getElementById("repo-section").style.display = "block";
+      loadRepos();
+    }
+  } catch(e) {}
+}
 
+// ── Repos ────────────────────────────────────────────────────
+async function loadRepos() {
+  const sel = document.getElementById("repoSelect");
+  sel.innerHTML = '<option value="">— loading… —</option>';
+  try {
+    const resp = await fetch("/repos");
+    const data = await resp.json();
+    if (data.error) { sel.innerHTML = '<option value="">Failed to load repos</option>'; return; }
+    sel.innerHTML = '<option value="">— select a repository —</option>';
+    (data.repos || []).forEach(r => {
+      const opt = document.createElement("option");
+      opt.value = r.full_name;
+      opt.dataset.branch = r.default_branch;
+      const lock = r.private ? "🔒 " : "";
+      opt.textContent = `${lock}${r.full_name}  [${r.language}]  ★${r.stars}`;
+      sel.appendChild(opt);
+    });
+  } catch(e) {
+    sel.innerHTML = '<option value="">Error loading repos</option>';
+  }
+}
+
+// ── Scan repo ────────────────────────────────────────────────
+function scanRepo() {
+  const sel = document.getElementById("repoSelect");
+  const full_name = sel.value;
+  if (!full_name) { showError("Please select a repository."); return; }
+  const branch = sel.options[sel.selectedIndex].dataset.branch || "main";
+  currentRepo = {full_name, branch};
   hideError();
-  setLoading(true);
+  setBtnLoading("scanRepoBtn", "scan-repo-txt", true, "Scan repo");
   hidePanels();
   animateProgress();
-
   fetch("/scan", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({path})
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({repo: full_name, branch})
   })
   .then(r => r.json())
   .then(data => {
-    setLoading(false);
+    setBtnLoading("scanRepoBtn", "scan-repo-txt", false, "Scan repo");
     stopProgress();
     if (data.error) { showError(data.error); return; }
     scanData = data;
     renderDashboard(data);
+    fetchTree({repo: full_name, branch});
   })
   .catch(e => {
-    setLoading(false);
+    setBtnLoading("scanRepoBtn", "scan-repo-txt", false, "Scan repo");
     stopProgress();
-    showError("Connection error. Make sure the Flask server is running on port 5000.");
+    showError("Scan failed: " + e.message);
   });
 }
 
-function setLoading(on) {
-  const btn = document.getElementById("scanBtn");
-  const txt = document.getElementById("scan-btn-text");
-  const status = document.getElementById("nav-status");
-  btn.disabled = on;
-  txt.innerHTML = on ? '<span class="spinner"></span>' : "Scan";
-  status.innerHTML = on
-    ? '<span class="dot green"></span>&nbsp; Scanning...'
-    : '<span class="dot green"></span>&nbsp; Done';
-}
-
-let progressTimer = null;
-function animateProgress() {
-  const wrap = document.getElementById("progressWrap");
-  const bar = document.getElementById("progressBar");
-  wrap.style.display = "block";
-  bar.style.width = "0%";
-  let w = 0;
-  progressTimer = setInterval(() => {
-    w = Math.min(w + Math.random() * 12, 88);
-    bar.style.width = w + "%";
-  }, 350);
-}
-function stopProgress() {
-  clearInterval(progressTimer);
-  const bar = document.getElementById("progressBar");
-  bar.style.width = "100%";
-  setTimeout(() => { document.getElementById("progressWrap").style.display = "none"; }, 600);
-}
-
-function hidePanels() {
-  ["summaryGrid","chartsRow","vulnPanel","compPanel","licPanel"].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = "none";
+// ── Scan local path ──────────────────────────────────────────
+function startScan() {
+  const path = document.getElementById("pathInput").value.trim();
+  if (!path) { showError("Please enter a project path."); return; }
+  currentRepo = null;
+  hideError();
+  setBtnLoading("scanBtn", "scan-btn-txt", true, "Scan");
+  hidePanels();
+  animateProgress();
+  fetch("/scan", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({path})
+  })
+  .then(r => r.json())
+  .then(data => {
+    setBtnLoading("scanBtn", "scan-btn-txt", false, "Scan");
+    stopProgress();
+    if (data.error) { showError(data.error); return; }
+    scanData = data;
+    renderDashboard(data);
+    fetchTree({path});
+  })
+  .catch(e => {
+    setBtnLoading("scanBtn", "scan-btn-txt", false, "Scan");
+    stopProgress();
+    showError("Connection error — is Flask running on port 5000?");
   });
 }
 
-function showError(msg) {
-  const el = document.getElementById("errorBox");
-  el.textContent = "Error: " + msg;
-  el.style.display = "block";
-}
-function hideError() {
-  document.getElementById("errorBox").style.display = "none";
+// ── Tree ─────────────────────────────────────────────────────
+function fetchTree(payload) {
+  fetch("/tree", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify(payload)
+  })
+  .then(r => r.json())
+  .then(data => { if (!data.error) renderTreePanel(data); })
+  .catch(() => {});
 }
 
-function renderDashboard(data) {
-  const { summary, components, vulnerabilities, licenses } = data;
+function renderTreePanel(data) {
+  let totalFiles = 0;
+  function count(nodes) { for (const n of nodes) { if (n.type==="file") totalFiles++; else count(n.children||[]); } }
+  count(data.tree);
+  document.getElementById("tree-count").textContent = totalFiles + " files";
+  let html = `<div style="margin-bottom:8px;font-family:var(--mono);font-size:13px">
+    <span style="color:var(--blue);font-weight:600">📦 ${escHtml(data.root)}</span></div>`;
+  for (const node of data.tree) html += renderTreeNode(node, 0);
+  document.getElementById("treeBody").innerHTML = html;
+  document.getElementById("treePanel").style.display = "block";
+}
 
-  // Summary cards
-  document.getElementById("s-total").textContent = summary.total_components;
+function renderTreeNode(node, indent) {
+  const isDir  = node.type === "dir";
+  const hasKids = isDir && node.children && node.children.length > 0;
+  const id  = "td-" + Math.random().toString(36).slice(2);
+  const tog = hasKids
+    ? `<span class="tree-toggle" onclick="toggleTree('${id}')">▾</span>`
+    : `<span style="width:14px;display:inline-block"></span>`;
+  const icon = isDir ? "📁" : fileIcon(node.name);
+  const cls  = isDir ? "tree-dir" : "tree-file";
+  let html = `<div style="padding-left:${indent*18}px">
+    <div class="tree-row">${tog}<span style="font-size:13px">${icon}</span><span class="${cls}">${escHtml(node.name)}</span></div>`;
+  if (hasKids) {
+    html += `<div id="${id}" class="tree-children" style="max-height:2000px">`;
+    for (const c of node.children) html += renderTreeNode(c, indent+1);
+    html += `</div>`;
+  }
+  return html + `</div>`;
+}
+
+function toggleTree(id) {
+  const el  = document.getElementById(id);
+  const tog = el.previousElementSibling.querySelector(".tree-toggle");
+  const collapsed = el.style.maxHeight === "0px";
+  el.style.maxHeight  = collapsed ? "2000px" : "0px";
+  tog.textContent = collapsed ? "▾" : "▸";
+}
+
+function fileIcon(name) {
+  const ext = name.split(".").pop().toLowerCase();
+  const m = {py:"🐍",js:"🟨",ts:"🔷",json:"📋",md:"📝",txt:"📄",toml:"⚙️",yaml:"⚙️",yml:"⚙️",
+             go:"🐹",rs:"🦀",lock:"🔒",xml:"📰",sh:"🖥️",css:"🎨",html:"🌐",env:"🔑"};
+  return m[ext] || "📄";
+}
+
+// ── Dashboard render ─────────────────────────────────────────
+function renderDashboard({summary, components, vulnerabilities, licenses}) {
+  document.getElementById("s-total").textContent    = summary.total_components;
   document.getElementById("s-critical").textContent = summary.critical;
-  document.getElementById("s-high").textContent = summary.high;
-  document.getElementById("s-medium").textContent = summary.medium;
-  document.getElementById("s-low").textContent = summary.low;
-  document.getElementById("s-license").textContent = summary.license_issues;
+  document.getElementById("s-high").textContent     = summary.high;
+  document.getElementById("s-medium").textContent   = summary.medium;
+  document.getElementById("s-low").textContent      = summary.low;
+  document.getElementById("s-license").textContent  = summary.license_issues;
   document.getElementById("summaryGrid").style.display = "grid";
-
-  // Charts
-  document.getElementById("chartsRow").style.display = "grid";
+  document.getElementById("chartsRow").style.display  = "grid";
   renderSeverityChart(summary);
   renderEcoChart(components);
-
-  // Vulnerabilities
   document.getElementById("vulnPanel").style.display = "block";
-  document.getElementById("vuln-count").textContent = vulnerabilities.length;
+  document.getElementById("vuln-count").textContent  = vulnerabilities.length;
   renderVulnTable(vulnerabilities, "ALL");
-
-  // Components
   document.getElementById("compPanel").style.display = "block";
-  document.getElementById("comp-count").textContent = components.length;
+  document.getElementById("comp-count").textContent  = components.length;
   renderCompTable(components);
-
-  // Licenses
   document.getElementById("licPanel").style.display = "block";
-  document.getElementById("lic-count").textContent = licenses.length;
+  document.getElementById("lic-count").textContent  = licenses.length;
   renderLicTable(licenses);
-
-  loadTree(document.getElementById("pathInput").value.trim());
 }
 
-function renderSeverityChart(summary) {
+function renderSeverityChart(s) {
   if (sevChart) sevChart.destroy();
-  const ctx = document.getElementById("severityChart").getContext("2d");
-  sevChart = new Chart(ctx, {
-    type: "doughnut",
-    data: {
-      labels: ["Critical", "High", "Medium", "Low"],
-      datasets: [{
-        data: [summary.critical, summary.high, summary.medium, summary.low],
-        backgroundColor: ["#ff7b72", "#f85149", "#d29922", "#3fb950"],
-        borderColor: "#161b22",
-        borderWidth: 3,
-        hoverOffset: 6,
-      }]
+  sevChart = new Chart(document.getElementById("severityChart").getContext("2d"), {
+    type:"doughnut",
+    data:{
+      labels:["Critical","High","Medium","Low"],
+      datasets:[{data:[s.critical,s.high,s.medium,s.low],
+        backgroundColor:["#ff7b72","#f85149","#d29922","#3fb950"],
+        borderColor:"#161b22", borderWidth:3, hoverOffset:6}]
     },
-    options: {
-      responsive: true, maintainAspectRatio: false, cutout: "65%",
-      plugins: {
-        legend: { display: false },
-        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw}` } }
-      }
-    }
+    options:{responsive:true,maintainAspectRatio:false,cutout:"65%",
+      plugins:{legend:{display:false}}}
   });
 }
 
 function renderEcoChart(components) {
   if (ecoChartInst) ecoChartInst.destroy();
   const counts = {};
-  components.forEach(c => { counts[c.ecosystem || "unknown"] = (counts[c.ecosystem || "unknown"] || 0) + 1; });
-  const labels = Object.keys(counts);
-  const values = Object.values(counts);
+  components.forEach(c => { counts[c.ecosystem||"unknown"] = (counts[c.ecosystem||"unknown"]||0)+1; });
+  const labels = Object.keys(counts), values = Object.values(counts);
   const colors = ["#388bfd","#3fb950","#d29922","#bc8cff","#f85149","#58a6ff","#56d364"];
-  const ctx = document.getElementById("ecoChart").getContext("2d");
-  ecoChartInst = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels,
-      datasets: [{
-        data: values,
-        backgroundColor: labels.map((_, i) => colors[i % colors.length]),
-        borderRadius: 5,
-        borderSkipped: false,
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false, indexAxis: "y",
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { color: "#21262d" }, ticks: { color: "#8b949e", font: { size: 11 } } },
-        y: { grid: { display: false }, ticks: { color: "#e6edf3", font: { size: 12 } } }
-      }
-    }
+  ecoChartInst = new Chart(document.getElementById("ecoChart").getContext("2d"), {
+    type:"bar",
+    data:{labels, datasets:[{data:values, backgroundColor:labels.map((_,i)=>colors[i%colors.length]), borderRadius:5, borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:"y",
+      plugins:{legend:{display:false}},
+      scales:{x:{grid:{color:"#21262d"},ticks:{color:"#8b949e",font:{size:11}}},
+              y:{grid:{display:false},ticks:{color:"#e6edf3",font:{size:12}}}}}
   });
 }
 
 function renderVulnTable(vulns, sevFilter) {
   currentSevFilter = sevFilter;
-  const filtered = sevFilter === "ALL" ? vulns : vulns.filter(v => v.severity === sevFilter);
+  const filtered = sevFilter==="ALL" ? vulns : vulns.filter(v=>v.severity===sevFilter);
   const tbody = document.getElementById("vulnBody");
-  if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:#6e7681">No vulnerabilities found for this filter</td></tr>`;
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:#6e7681">No vulnerabilities for this filter</td></tr>`;
     return;
   }
   tbody.innerHTML = filtered.map(v => {
-    const cveId = v.aliases.find(a => a.startsWith("CVE-")) || v.id;
-    const cveUrl = cveId.startsWith("CVE-") ? `https://nvd.nist.gov/vuln/detail/${cveId}` : `https://osv.dev/vulnerability/${v.id}`;
+    const cveId  = v.aliases.find(a=>a.startsWith("CVE-")) || v.id;
+    const cveUrl = cveId.startsWith("CVE-")
+      ? `https://nvd.nist.gov/vuln/detail/${cveId}`
+      : `https://osv.dev/vulnerability/${v.id}`;
     return `<tr>
       <td><a class="cve-link" href="${cveUrl}" target="_blank">${cveId}</a></td>
       <td><span class="badge ${v.severity.toLowerCase()}">${v.severity}</span></td>
       <td class="name-cell">${escHtml(v.component)}</td>
       <td class="version-cell">${escHtml(v.version)}</td>
-      <td class="summary-cell">${escHtml(v.summary.substring(0, 90))}${v.summary.length > 90 ? "…" : ""}</td>
+      <td class="summary-cell">${escHtml(v.summary.substring(0,90))}${v.summary.length>90?"…":""}</td>
       <td><span class="badge eco">${escHtml(v.ecosystem)}</span></td>
     </tr>`;
   }).join("");
 }
 
 function filterVulns(el) {
-  document.querySelectorAll(".filter-tabs .tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".filter-tabs .tab").forEach(t=>t.classList.remove("active"));
   el.classList.add("active");
   if (scanData) renderVulnTable(scanData.vulnerabilities, el.dataset.sev);
 }
 
 function renderCompTable(components) {
-  const ecosystems = [...new Set(components.map(c => c.ecosystem || "unknown"))];
-  const filterRow = document.getElementById("ecoFilters");
-  filterRow.innerHTML = ecosystems.map(e =>
-    `<span class="badge eco" style="cursor:pointer" onclick="filterComps('${e}')">${e}</span>`
-  ).join("") + `<span class="badge" style="cursor:pointer;background:var(--surface2);color:var(--text2)" onclick="filterComps('ALL')">All</span>`;
-
+  const ecosystems = [...new Set(components.map(c=>c.ecosystem||"unknown"))];
+  document.getElementById("ecoFilters").innerHTML =
+    ecosystems.map(e=>`<span class="badge eco" style="cursor:pointer" onclick="filterComps('${e}')">${e}</span>`).join("") +
+    `<span class="badge" style="cursor:pointer;background:var(--surface2);color:var(--text2)" onclick="filterComps('ALL')">All</span>`;
   renderCompRows(components, "ALL");
 }
 
@@ -584,126 +595,87 @@ function filterComps(eco) {
 }
 
 function renderCompRows(components, ecoFilter) {
-  const filtered = ecoFilter === "ALL" ? components : components.filter(c => c.ecosystem === ecoFilter);
-  const tbody = document.getElementById("compBody");
-  tbody.innerHTML = filtered.map(c => `<tr>
+  const filtered = ecoFilter==="ALL" ? components : components.filter(c=>c.ecosystem===ecoFilter);
+  document.getElementById("compBody").innerHTML = filtered.map(c=>`<tr>
     <td class="name-cell">${escHtml(c.name)}</td>
     <td class="version-cell">${escHtml(c.version)}</td>
-    <td><span class="badge eco">${escHtml(c.ecosystem || "unknown")}</span></td>
-    <td class="purl-cell" title="${escHtml(c.purl || "")}">${escHtml(c.purl || "—")}</td>
+    <td><span class="badge eco">${escHtml(c.ecosystem||"unknown")}</span></td>
+    <td class="purl-cell" title="${escHtml(c.purl||"")}">${escHtml(c.purl||"—")}</td>
   </tr>`).join("");
 }
 
 function renderLicTable(licenses) {
   const tbody = document.getElementById("licBody");
-  if (licenses.length === 0) {
+  if (!licenses.length) {
     tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;padding:32px;color:#6e7681">No license files detected</td></tr>`;
     return;
   }
-  tbody.innerHTML = licenses.map(l => `<tr>
-    <td class="name-cell">${escHtml(l.component || l.file || "—")}</td>
+  tbody.innerHTML = licenses.map(l=>`<tr>
+    <td class="name-cell">${escHtml(l.component||l.file||"—")}</td>
     <td><code style="font-size:12px;color:var(--text2)">${escHtml(l.license)}</code></td>
-    <td><span class="badge risk-${(l.risk||"MEDIUM").toLowerCase()}">${escHtml(l.risk || "MEDIUM")}</span></td>
+    <td><span class="badge risk-${(l.risk||"MEDIUM").toLowerCase()}">${escHtml(l.risk||"MEDIUM")}</span></td>
   </tr>`).join("");
 }
 
 function exportSBOM() {
   if (!scanData) return;
-  fetch("/export/sbom", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({sbom: scanData.sbom_raw})
-  })
-  .then(r => r.json())
-  .then(data => {
-    const blob = new Blob([JSON.stringify(data, null, 2)], {type: "application/json"});
-    const url = URL.createObjectURL(blob);
+  fetch("/export/sbom", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({sbom:scanData.sbom_raw})})
+  .then(r=>r.json())
+  .then(data=>{
     const a = document.createElement("a");
-    a.href = url; a.download = "sbom.cdx.json"; a.click();
-    URL.revokeObjectURL(url);
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:"application/json"}));
+    a.download = "sbom.cdx.json"; a.click();
   });
 }
+
+// ── UI helpers 
+function setBtnLoading(btnId, txtId, on, label) {
+  const btn = document.getElementById(btnId);
+  const txt = document.getElementById(txtId);
+  if (btn) btn.disabled = on;
+  if (txt) txt.innerHTML = on ? '<span class="spinner"></span>' : label;
+  document.getElementById("nav-status").innerHTML = on
+    ? '<span class="dot green"></span>&nbsp;Scanning…'
+    : '<span class="dot green"></span>&nbsp;Done';
+}
+
+let progressTimer = null;
+function animateProgress() {
+  const wrap = document.getElementById("progressWrap");
+  const bar  = document.getElementById("progressBar");
+  wrap.style.display = "block"; bar.style.width = "0%";
+  let w = 0;
+  progressTimer = setInterval(()=>{ w = Math.min(w + Math.random()*12, 88); bar.style.width = w+"%"; }, 350);
+}
+function stopProgress() {
+  clearInterval(progressTimer);
+  const bar = document.getElementById("progressBar");
+  bar.style.width = "100%";
+  setTimeout(()=>{ document.getElementById("progressWrap").style.display="none"; }, 600);
+}
+
+function hidePanels() {
+  ["summaryGrid","chartsRow","vulnPanel","compPanel","licPanel","treePanel"]
+    .forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display="none"; });
+}
+
+function showError(msg) {
+  const el = document.getElementById("errorBox");
+  el.textContent = "Error: " + msg; el.style.display = "block";
+}
+function hideError() { document.getElementById("errorBox").style.display = "none"; }
 
 function escHtml(s) {
   return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 }
 
-document.getElementById("pathInput").addEventListener("keydown", e => {
-  if (e.key === "Enter") startScan();
-});
-
-function renderTree(node, indent) {
-  const isDir = node.type === "dir";
-  const hasKids = isDir && node.children && node.children.length > 0;
-  const id = "td-" + Math.random().toString(36).slice(2);
-
-  const toggle = hasKids
-    ? `<span class="tree-toggle" onclick="toggleTree('${id}')">▾</span>`
-    : `<span style="width:14px;display:inline-block"></span>`;
-
-  const icon = isDir ? "📁" : getFileIcon(node.name);
-  const cls  = isDir ? "tree-dir" : "tree-file";
-
-  let html = `<div style="padding-left:${indent * 18}px">
-    <div class="tree-row">
-      ${toggle}
-      <span class="tree-icon">${icon}</span>
-      <span class="${cls}">${escHtml(node.name)}</span>
-    </div>`;
-
-  if (hasKids) {
-    html += `<div id="${id}" class="tree-children" style="max-height:2000px">`;
-    for (const child of node.children) html += renderTree(child, indent + 1);
-    html += `</div>`;
-  }
-  return html + `</div>`;
-}
-
-function toggleTree(id) {
-  const el = document.getElementById(id);
-  const toggle = el.previousElementSibling.querySelector(".tree-toggle");
-  if (el.style.maxHeight === "0px") {
-    el.style.maxHeight = "2000px";
-    toggle.textContent = "▾";
-  } else {
-    el.style.maxHeight = "0px";
-    toggle.textContent = "▸";
-  }
-}
-
-function getFileIcon(name) {
-  const ext = name.split(".").pop().toLowerCase();
-  const map = {
-    py:"🐍", js:"🟨", ts:"🔷", json:"📋", md:"📝", txt:"📄",
-    toml:"⚙️", yaml:"⚙️", yml:"⚙️", go:"🐹", rs:"🦀",
-    lock:"🔒", xml:"📰", sh:"🖥️", env:"🔑", css:"🎨", html:"🌐"
-  };
-  return map[ext] || "📄";
-}
-
-function loadTree(path) {
-  fetch("/tree", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({path})
-  })
-  .then(r => r.json())
-  .then(data => {
-    if (data.error) return;
-    const panel = document.getElementById("treePanel");
-    const body  = document.getElementById("treeBody");
-    panel.style.display = "block";
-
-    let totalFiles = 0;
-    function count(nodes) { for (const n of nodes) { if (n.type==="file") totalFiles++; else count(n.children||[]); } }
-    count(data.tree);
-    document.getElementById("tree-count").textContent = totalFiles + " files";
-
-    let html = `<div style="margin-bottom:8px"><span class="tree-dir" style="font-weight:600">📦 ${escHtml(data.root)}</span></div>`;
-    for (const node of data.tree) html += renderTree(node, 0);
-    body.innerHTML = html;
+// ── Keyboard shortcut ────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", () => {
+  initAuth();
+  document.getElementById("pathInput").addEventListener("keydown", e => {
+    if (e.key === "Enter") startScan();
   });
-}
+});
 </script>
 </body>
 </html>
