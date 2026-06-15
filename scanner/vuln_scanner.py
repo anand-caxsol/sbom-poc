@@ -13,15 +13,15 @@ SEVERITY_SCORE = {"CRITICAL": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1, "UNKNOWN": 0}
 # Demo vulnerabilities for well-known vulnerable packages (shown when OSV API unreachable)
 DEMO_VULNS = {
     ("flask", "1.0.0", "PyPI"): [{"id": "GHSA-562c-5r94-xh97", "aliases": ["CVE-2018-1000656"], "summary": "Flask is vulnerable to ReDoS via crafted URL", "severity": "HIGH"}],
-    ("django", "2.0.1", "PyPI"): [{"id": "CVE-2019-3498", "aliases": ["CVE-2019-3498"], "summary": "django.contrib.auth.forms.AuthenticationForm allows remote attackers to enumerate usernames", "severity": "MEDIUM"}],
-    ("requests", "2.18.0", "PyPI"): [{"id": "CVE-2018-18074", "aliases": ["CVE-2018-18074"], "summary": "Requests package sends authorization headers to unintended third-party sites", "severity": "HIGH"}],
-    ("Pillow", "5.0.0", "PyPI"): [{"id": "CVE-2019-16865", "aliases": ["CVE-2019-16865"], "summary": "Pillow before 6.2.0 allows a denial of service (memory consumption) due to ImageFont", "severity": "HIGH"}],
-    ("cryptography", "2.1.4", "PyPI"): [{"id": "CVE-2018-10903", "aliases": ["CVE-2018-10903"], "summary": "A flaw was found in python-cryptography where a GCM truncated MAC issue could cause data integrity failures", "severity": "HIGH"}],
-    ("PyYAML", "3.13", "PyPI"): [{"id": "CVE-2017-18342", "aliases": ["CVE-2017-18342"], "summary": "PyYAML yaml.load() is vulnerable to arbitrary code execution", "severity": "CRITICAL"}],
-    ("urllib3", "1.24.1", "PyPI"): [{"id": "CVE-2019-11324", "aliases": ["CVE-2019-11324"], "summary": "urllib3 before 1.24.2 does not allow sending sni_hostname in verify=False mode, leading to header injection", "severity": "HIGH"}],
-    ("lodash", "4.17.4", "npm"): [{"id": "CVE-2021-23337", "aliases": ["CVE-2021-23337"], "summary": "Lodash command injection via template function", "severity": "HIGH"}],
-    ("axios", "0.18.0", "npm"): [{"id": "CVE-2019-10742", "aliases": ["CVE-2019-10742"], "summary": "Axios allows server-side request forgery via a crafted URL", "severity": "HIGH"}],
-    ("minimist", "0.0.8", "npm"): [{"id": "CVE-2020-7598", "aliases": ["CVE-2020-7598"], "summary": "minimist prototype pollution vulnerability", "severity": "MEDIUM"}],
+    # ("django", "2.0.1", "PyPI"): [{"id": "CVE-2019-3498", "aliases": ["CVE-2019-3498"], "summary": "django.contrib.auth.forms.AuthenticationForm allows remote attackers to enumerate usernames", "severity": "MEDIUM"}],
+    # ("requests", "2.18.0", "PyPI"): [{"id": "CVE-2018-18074", "aliases": ["CVE-2018-18074"], "summary": "Requests package sends authorization headers to unintended third-party sites", "severity": "HIGH"}],
+    # ("Pillow", "5.0.0", "PyPI"): [{"id": "CVE-2019-16865", "aliases": ["CVE-2019-16865"], "summary": "Pillow before 6.2.0 allows a denial of service (memory consumption) due to ImageFont", "severity": "HIGH"}],
+    # ("cryptography", "2.1.4", "PyPI"): [{"id": "CVE-2018-10903", "aliases": ["CVE-2018-10903"], "summary": "A flaw was found in python-cryptography where a GCM truncated MAC issue could cause data integrity failures", "severity": "HIGH"}],
+    # ("PyYAML", "3.13", "PyPI"): [{"id": "CVE-2017-18342", "aliases": ["CVE-2017-18342"], "summary": "PyYAML yaml.load() is vulnerable to arbitrary code execution", "severity": "CRITICAL"}],
+    # ("urllib3", "1.24.1", "PyPI"): [{"id": "CVE-2019-11324", "aliases": ["CVE-2019-11324"], "summary": "urllib3 before 1.24.2 does not allow sending sni_hostname in verify=False mode, leading to header injection", "severity": "HIGH"}],
+    # ("lodash", "4.17.4", "npm"): [{"id": "CVE-2021-23337", "aliases": ["CVE-2021-23337"], "summary": "Lodash command injection via template function", "severity": "HIGH"}],
+    # ("axios", "0.18.0", "npm"): [{"id": "CVE-2019-10742", "aliases": ["CVE-2019-10742"], "summary": "Axios allows server-side request forgery via a crafted URL", "severity": "HIGH"}],
+    # ("minimist", "0.0.8", "npm"): [{"id": "CVE-2020-7598", "aliases": ["CVE-2020-7598"], "summary": "minimist prototype pollution vulnerability", "severity": "MEDIUM"}],
 }
 
 def query_osv(component):

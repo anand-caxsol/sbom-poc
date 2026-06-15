@@ -48,5 +48,31 @@ def export_sbom():
     sbom = data.get("sbom", {})
     return jsonify(sbom)
 
+@app.route("/tree", methods=["POST"])
+def tree():
+    data = request.get_json()
+    project_path = data.get("path", "").strip()
+    if not project_path or not os.path.exists(project_path):
+        return jsonify({"error": "Path not found"}), 400
+
+    IGNORE = {"node_modules", ".git", "__pycache__", "venv", ".venv", ".idea", "dist", "build", ".next"}
+
+    def walk(path, depth=0, max_depth=4):
+        items = []
+        try:
+            entries = sorted(os.scandir(path), key=lambda e: (not e.is_dir(), e.name.lower()))
+        except PermissionError:
+            return items
+        for entry in entries:
+            if entry.name.startswith(".") or entry.name in IGNORE:
+                continue
+            node = {"name": entry.name, "type": "dir" if entry.is_dir() else "file", "children": []}
+            if entry.is_dir() and depth < max_depth:
+                node["children"] = walk(entry.path, depth + 1, max_depth)
+            items.append(node)
+        return items
+
+    return jsonify({"tree": walk(project_path), "root": os.path.basename(project_path)})
+
 if __name__ == "__main__":
     app.run(debug=True, port=5000)

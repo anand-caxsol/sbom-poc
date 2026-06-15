@@ -47,6 +47,13 @@
   .nav-spacer { flex: 1; }
   .nav-status { font-size: 12px; color: var(--text3); }
 
+  .tree-row { display:flex; align-items:center; gap:6px; padding:1px 0; cursor:default; border-radius:4px; }
+  .tree-row:hover { background:rgba(255,255,255,0.03); }
+  .tree-dir  { color: #388bfd; }
+  .tree-file { color: #8b949e; }
+  .tree-icon { font-size:13px; width:16px; text-align:center; flex-shrink:0; }
+  .tree-toggle { cursor:pointer; user-select:none; width:14px; text-align:center; color:var(--text3); flex-shrink:0; }
+  .tree-children { overflow:hidden; transition:max-height 0.2s ease; }
   /* ── Layout ── */
   .page { max-width: 1200px; margin: 0 auto; padding: 28px; }
 
@@ -352,6 +359,15 @@
     </div>
   </div>
 
+  <!-- Project Structure -->
+<div class="panel full-col" id="treePanel" style="display:none">
+  <div class="panel-head">
+    <h3>Project structure</h3>
+    <span class="count" id="tree-count">0 files</span>
+  </div>
+  <div style="padding:16px 20px;font-family:var(--mono);font-size:13px;line-height:1.8;max-height:420px;overflow-y:auto" id="treeBody"></div>
+</div>
+
 </div>
 
 <script>
@@ -466,6 +482,8 @@ function renderDashboard(data) {
   document.getElementById("licPanel").style.display = "block";
   document.getElementById("lic-count").textContent = licenses.length;
   renderLicTable(licenses);
+
+  loadTree(document.getElementById("pathInput").value.trim());
 }
 
 function renderSeverityChart(summary) {
@@ -613,6 +631,79 @@ function escHtml(s) {
 document.getElementById("pathInput").addEventListener("keydown", e => {
   if (e.key === "Enter") startScan();
 });
+
+function renderTree(node, indent) {
+  const isDir = node.type === "dir";
+  const hasKids = isDir && node.children && node.children.length > 0;
+  const id = "td-" + Math.random().toString(36).slice(2);
+
+  const toggle = hasKids
+    ? `<span class="tree-toggle" onclick="toggleTree('${id}')">▾</span>`
+    : `<span style="width:14px;display:inline-block"></span>`;
+
+  const icon = isDir ? "📁" : getFileIcon(node.name);
+  const cls  = isDir ? "tree-dir" : "tree-file";
+
+  let html = `<div style="padding-left:${indent * 18}px">
+    <div class="tree-row">
+      ${toggle}
+      <span class="tree-icon">${icon}</span>
+      <span class="${cls}">${escHtml(node.name)}</span>
+    </div>`;
+
+  if (hasKids) {
+    html += `<div id="${id}" class="tree-children" style="max-height:2000px">`;
+    for (const child of node.children) html += renderTree(child, indent + 1);
+    html += `</div>`;
+  }
+  return html + `</div>`;
+}
+
+function toggleTree(id) {
+  const el = document.getElementById(id);
+  const toggle = el.previousElementSibling.querySelector(".tree-toggle");
+  if (el.style.maxHeight === "0px") {
+    el.style.maxHeight = "2000px";
+    toggle.textContent = "▾";
+  } else {
+    el.style.maxHeight = "0px";
+    toggle.textContent = "▸";
+  }
+}
+
+function getFileIcon(name) {
+  const ext = name.split(".").pop().toLowerCase();
+  const map = {
+    py:"🐍", js:"🟨", ts:"🔷", json:"📋", md:"📝", txt:"📄",
+    toml:"⚙️", yaml:"⚙️", yml:"⚙️", go:"🐹", rs:"🦀",
+    lock:"🔒", xml:"📰", sh:"🖥️", env:"🔑", css:"🎨", html:"🌐"
+  };
+  return map[ext] || "📄";
+}
+
+function loadTree(path) {
+  fetch("/tree", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({path})
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) return;
+    const panel = document.getElementById("treePanel");
+    const body  = document.getElementById("treeBody");
+    panel.style.display = "block";
+
+    let totalFiles = 0;
+    function count(nodes) { for (const n of nodes) { if (n.type==="file") totalFiles++; else count(n.children||[]); } }
+    count(data.tree);
+    document.getElementById("tree-count").textContent = totalFiles + " files";
+
+    let html = `<div style="margin-bottom:8px"><span class="tree-dir" style="font-weight:600">📦 ${escHtml(data.root)}</span></div>`;
+    for (const node of data.tree) html += renderTree(node, 0);
+    body.innerHTML = html;
+  });
+}
 </script>
 </body>
 </html>
