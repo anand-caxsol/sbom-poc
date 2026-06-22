@@ -1,5 +1,6 @@
 import os, json, subprocess, hashlib
 from datetime import datetime
+import uuid
 
 ECOSYSTEM_FILES = {
     "npm": ["package.json", "package-lock.json"],
@@ -161,15 +162,16 @@ def generate_sbom(project_path):
         key = f"{c['name']}@{c['version']}"
         if key not in seen:
             seen.add(key)
+            c["bom-ref"] = c.get("purl") or f"{c['name']}@{c['version']}"
             unique.append(c)
 
-    sbom_id = hashlib.md5(project_path.encode()).hexdigest()[:8]
+
     ecosystems = detect_ecosystems(project_path)
 
     return {
         "bomFormat": "CycloneDX",
         "specVersion": "1.4",
-        "serialNumber": f"urn:uuid:sbom-{sbom_id}",
+        "serialNumber": f"urn:uuid:{uuid.uuid4()}",
         "version": 1,
         "metadata": {
             "timestamp": datetime.utcnow().isoformat() + "Z",
@@ -177,8 +179,6 @@ def generate_sbom(project_path):
                 "name": os.path.basename(project_path),
                 "type": "application",
             },
-            "ecosystems": ecosystems,
-            "source_files": metadata_files,
         },
         "components": unique,
     }

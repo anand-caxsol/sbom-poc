@@ -1,10 +1,11 @@
 import requests, os, base64, tempfile
+import re
 
 def get_user_repos(access_token):
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Accept": "application/vnd.github+json"
-    }
+    headers = {"Accept": "application/vnd.github+json"}
+    if access_token:
+        headers["Authorization"] = f"Bearer {access_token}"
+        
     repos = []
     page = 1
     while True:
@@ -47,11 +48,36 @@ MANIFEST_FILES = [
     "Gemfile", "Gemfile.lock",
 ]
 
+def parse_github_url(url):
+    """
+    Accepts:
+      https://github.com/owner/repo
+      https://github.com/owner/repo.git
+      https://github.com/owner/repo/tree/branch
+      github.com/owner/repo
+      owner/repo
+    Returns (full_name, branch_or_none)
+    """
+    url = url.strip().rstrip("/")
+    url = re.sub(r"^https?://", "", url)
+    url = re.sub(r"^github\.com/", "", url)
+    url = re.sub(r"\.git$", "", url)
+
+    parts = url.split("/")
+    if len(parts) < 2:
+        return None, None
+
+    owner, repo = parts[0], parts[1]
+    branch = None
+    if len(parts) >= 4 and parts[2] == "tree":
+        branch = parts[3]
+
+    return f"{owner}/{repo}", branch
+
 def fetch_repo_tree(access_token, full_name, branch="main"):
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Accept": "application/vnd.github+json"
-    }
+    headers = {"Accept": "application/vnd.github+json"}
+    if access_token:
+        headers["Authorization"] = f"Bearer {access_token}"
     resp = requests.get(
         f"https://api.github.com/repos/{full_name}/git/trees/{branch}",
         headers=headers,
@@ -73,10 +99,9 @@ def fetch_repo_tree(access_token, full_name, branch="main"):
     return data.get("tree", []), data.get("sha", branch)
 
 def fetch_file_content(access_token, full_name, file_path):
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Accept": "application/vnd.github+json"
-    }
+    headers = {"Accept": "application/vnd.github+json"}
+    if access_token:
+        headers["Authorization"] = f"Bearer {access_token}"
     resp = requests.get(
         f"https://api.github.com/repos/{full_name}/contents/{file_path}",
         headers=headers,

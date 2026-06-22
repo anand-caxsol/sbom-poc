@@ -113,15 +113,24 @@ def repos():
 def scan():
     data = request.get_json()
     project_path = data.get("path", "").strip()
-    repo_full_name = data.get("repo")          # e.g. "torvalds/linux"
-    repo_branch = data.get("branch", "main")
+    repo_full_name = data.get("repo")
+    repo_branch    = data.get("branch", "main")
+    repo_url       = data.get("repo_url")
+
+    if repo_url:
+        from scanner.github_fetcher import parse_github_url
+        parsed_name, parsed_branch = parse_github_url(repo_url)
+        if not parsed_name:
+            return jsonify({"error": "Invalid GitHub URL"}), 400
+        repo_full_name = parsed_name
+        repo_branch    = parsed_branch or "main"
 
     tmpdir = None
 
     try:
         if repo_full_name:
-            if not get_token():
-                return jsonify({"error": "Not authenticated"}), 401
+            # if not get_token():
+            #     return jsonify({"error": "Not authenticated"}), 401
             tmpdir, actual_branch, fetched_files = download_repo_manifests(
                 get_token(), repo_full_name, repo_branch
             )
@@ -135,27 +144,51 @@ def scan():
         else:
             return jsonify({"error": "Provide either a repo or a local path"}), 400
 
+        from scanner.dependency_track import scan_via_dependency_track
+
         sbom = generate_sbom(scan_path)
         sbom["metadata"]["component"]["name"] = scan_label
-        vulns = scan_vulnerabilities(sbom)
         licenses = scan_licenses(scan_path)
 
-        summary = {
-            "total_components": len(sbom.get("components", [])),
-            "critical": sum(1 for v in vulns if v["severity"] == "CRITICAL"),
-            "high":     sum(1 for v in vulns if v["severity"] == "HIGH"),
-            "medium":   sum(1 for v in vulns if v["severity"] == "MEDIUM"),
-            "low":      sum(1 for v in vulns if v["severity"] == "LOW"),
-            "license_issues": sum(1 for l in licenses if l.get("risk") == "HIGH"),
-        }
+        import traceback
 
+        try:
+            dt_result = scan_via_dependency_track(sbom, project_name=scan_label, project_version="1.0.0")
+            vulns      = dt_result["vulnerabilities"]
+            components = dt_result["components"] or sbom.get("components", [])
+            dtrack_url = dt_result["dtrack_url"]
+        except Exception as e:
+            print("=" * 60)
+            print("DEPENDENCY-TRACK SCAN FAILED:")
+            print(f"  Exception type: {type(e).__name__}")
+            print(f"  Exception message: {e}")
+            traceback.print_exc()
+            print("=" * 60)
+
+            vulns      = scan_vulnerabilities(sbom)
+            components = sbom.get("components", [])
+            dtrack_url = None
+            dtrack_error = str(e)  # capture for the response too
+
+        summary = {
+            "total_components": len(components),
+            "critical":         sum(1 for v in vulns if v["severity"] == "CRITICAL"),
+            "high":             sum(1 for v in vulns if v["severity"] == "HIGH"),
+            "medium":           sum(1 for v in vulns if v["severity"] == "MEDIUM"),
+            "low":              sum(1 for v in vulns if v["severity"] == "LOW"),
+            "license_issues":   sum(1 for l in licenses if l.get("risk") == "HIGH"),
+        }
+        print("Dependency Track URL:", dtrack_url)
         return jsonify({
-            "summary": summary,
-            "components": sbom.get("components", []),
+            "summary":         summary,
+            "components":      components,
             "vulnerabilities": vulns,
-            "licenses": licenses,
-            "sbom_raw": sbom,
+            "licenses":        licenses,
+            "sbom_raw":        sbom,
+            "dtrack_url":      dtrack_url,
+            "dtrack_error":    locals().get("dtrack_error"),
         })
+    
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
@@ -168,15 +201,25 @@ def scan():
 def tree():
     data = request.get_json()
     repo_full_name = data.get("repo")
+    repo_full_name = data.get("repo")
     repo_branch    = data.get("branch", "main")
     project_path   = data.get("path", "").strip()
+    repo_url       = data.get("repo_url")
+
+    if repo_url:
+        from scanner.github_fetcher import parse_github_url
+        parsed_name, parsed_branch = parse_github_url(repo_url)
+        if not parsed_name:
+            return jsonify({"error": "Invalid GitHub URL"}), 400
+        repo_full_name = parsed_name
+        repo_branch    = parsed_branch or "main"
 
     IGNORE = {"node_modules", ".git", "__pycache__", "venv", ".venv", "dist", "build", ".next"}
 
     try:
         if repo_full_name:
-            if not get_token():
-                return jsonify({"error": "Not authenticated"}), 401
+            # if not get_token():
+            #     return jsonify({"error": "Not authenticated"}), 401
             tree_data = build_repo_tree_structure(get_token(), repo_full_name, repo_branch)
             root_name = repo_full_name
         elif project_path and os.path.exists(project_path):

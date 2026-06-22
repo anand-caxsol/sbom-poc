@@ -5,3 +5,7 @@ GITHUB_AUTHORIZE_URL = "https://github.com/login/oauth/authorize"
 GITHUB_TOKEN_URL     = "https://github.com/login/oauth/access_token"
 GITHUB_API_BASE      = "https://api.github.com"
 GITHUB_SCOPE         = "read:user repo"
+
+#dependency-track
+DTRACK_BASE_URL = "http://localhost:8081"
+DTRACK_API_KEY = "odt_kUsaRtz4_XDcEBRzvITgEe0aAkuCFv5I8TxU4FxI0"
