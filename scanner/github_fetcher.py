@@ -156,6 +156,28 @@ def download_repo_manifests(access_token, full_name, branch="main"):
 
     return tmpdir, actual_branch, manifest_paths
 
+def fetch_license_files(access_token, full_name, branch="main"):
+    """Fetches LICENSE/COPYING/NOTICE files from repo root and subdirs."""
+    tree, _ = fetch_repo_tree(access_token, full_name, branch)
+
+    LICENSE_PREFIXES = ("license", "licence", "copying", "notice")
+    _SKIP = {"node_modules", "vendor", ".git", "dist", "build", "venv", ".venv"}
+    license_paths = []
+
+    for item in tree:
+        if item.get("type") != "blob":
+            continue
+        path  = item["path"]
+        fname = os.path.basename(path).lower()
+        parts = path.split("/")
+
+        if any(p in _SKIP for p in parts):
+            continue
+        if any(fname.startswith(p) for p in LICENSE_PREFIXES):
+            license_paths.append(path)
+
+    return license_paths
+
 def build_repo_tree_structure(access_token, full_name, branch="main"):
     """Returns tree structure for the frontend project-structure panel."""
     tree, _ = fetch_repo_tree(access_token, full_name, branch)

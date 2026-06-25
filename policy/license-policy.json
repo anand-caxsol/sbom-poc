@@ -1,0 +1,19 @@
+{
+  "restricted_licenses": [
+    "AGPL",
+    "GPL"
+  ],
+  "review_licenses": [
+    "LGPL",
+    "SSPL",
+    "BUSL",
+    "CC-BY-NC"
+  ],
+  "unknown_license_patterns": [
+    "unknown",
+    "proprietary",
+    "commercial"
+  ],
+  "fail_on_conflict": true,
+  "fail_on_scan_error": true
+}

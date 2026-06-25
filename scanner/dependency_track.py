@@ -160,8 +160,10 @@ def scan_via_dependency_track(sbom, project_name, project_version="1.0.0"):
     Flask /scan route already expects from the old OSV-based path.
     """
     token = upload_sbom(sbom, project_name, project_version)
-    wait_for_processing(token)
-
+    processed = wait_for_processing(token, timeout=120, interval=3)
+    if not processed:
+        print("[DTR ACK] Warning: BOM still processing after timeout, fetching anyway")
+    
     project_uuid = get_project_uuid(project_name, project_version)
     if not project_uuid:
         raise RuntimeError("Dependency-Track did not create the project as expected")
@@ -170,6 +172,9 @@ def scan_via_dependency_track(sbom, project_name, project_version="1.0.0"):
     components = get_project_components(project_uuid)
     metrics = get_project_metrics(project_uuid)
 
+    print(f"[DTRACK] Metrics from Dependency-Track: {metrics}")
+    vulns = get_project_findings(project_uuid)
+    print(f"[DTRACK] Findings returned: {len(vulns)}")
     return {
         "vulnerabilities": vulns,
         "components": components,

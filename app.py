@@ -145,14 +145,36 @@ def scan():
             return jsonify({"error": "Provide either a repo or a local path"}), 400
 
         from scanner.dependency_track import scan_via_dependency_track
-
+        
+        print("STEP 1")
         sbom = generate_sbom(scan_path)
         sbom["metadata"]["component"]["name"] = scan_label
-        licenses = scan_licenses(scan_path)
+        
+        # Try ScanCode first, fall back to basic scanner if not installed
+        try:
+            from scanner.scancode_bridge import run_scancode_on_path, run_scancode_on_github_repo, format_for_dashboard, get_summary
+            policy_path = os.path.join(os.path.dirname(__file__), "policy", "license-policy.json")
+            policy_arg  = policy_path if os.path.exists(policy_path) else None
+
+            if repo_full_name:
+                sc_normalized = run_scancode_on_github_repo(
+                    get_token(), repo_full_name, repo_branch, policy_arg
+                )
+            else:
+                sc_normalized = run_scancode_on_path(scan_path, policy_arg)
+
+            licenses         = format_for_dashboard(sc_normalized)
+            scancode_summary = get_summary(sc_normalized)
+        except Exception as sc_err:
+            print(f"ScanCode unavailable, falling back: {sc_err}")
+            from scanner.license_scanner import scan_licenses
+            licenses         = scan_licenses(scan_path)
+            scancode_summary = None
 
         import traceback
 
         try:
+            print("STEP 3")
             dt_result = scan_via_dependency_track(sbom, project_name=scan_label, project_version="1.0.0")
             vulns      = dt_result["vulnerabilities"]
             components = dt_result["components"] or sbom.get("components", [])
@@ -176,7 +198,7 @@ def scan():
             "high":             sum(1 for v in vulns if v["severity"] == "HIGH"),
             "medium":           sum(1 for v in vulns if v["severity"] == "MEDIUM"),
             "low":              sum(1 for v in vulns if v["severity"] == "LOW"),
-            "license_issues":   sum(1 for l in licenses if l.get("risk") == "HIGH"),
+            "license_issues":   (scancode_summary.get("fail", 0) if scancode_summary else sum(1 for l in licenses if l.get("risk") == "HIGH")),
         }
         print("Dependency Track URL:", dtrack_url)
         return jsonify({
@@ -187,7 +209,10 @@ def scan():
             "sbom_raw":        sbom,
             "dtrack_url":      dtrack_url,
             "dtrack_error":    locals().get("dtrack_error"),
+            "scancode_summary": scancode_summary,
         })
+    
+
     
     except Exception as e:
         return jsonify({"error": str(e)}), 500

@@ -908,15 +908,20 @@
     <!-- LICENSES -->
     <div class="panel full-col" id="licPanel" style="display:none">
       <div class="panel-head">
-        <h3>License compliance</h3><span class="count" id="lic-count">0</span>
+        <h3>License compliance</h3>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span id="sc-gate" style="display:none;font-size:12px;padding:3px 10px;border-radius:12px;font-weight:600"></span>
+            <span class="count" id="lic-count">0</span>
+          </div>
       </div>
       <div class="table-scroll">
         <table class="data-table">
           <thead>
             <tr>
-              <th>Component / File</th>
+              <th>Component</th>
               <th>License</th>
               <th>Risk</th>
+              <th>Reasons</th>
             </tr>
           </thead>
           <tbody id="licBody"></tbody>
@@ -1135,7 +1140,7 @@
     }
 
     // ── Dashboard render ─────────────────────────────────────────
-    function renderDashboard({ summary, components, vulnerabilities, licenses, dtrack_url }) {
+    function renderDashboard({ summary, components, vulnerabilities, licenses, dtrack_url, scancode_summary }) {
       const link = document.getElementById("dtrack-link");
       if (dtrack_url) {
         link.href = dtrack_url;
@@ -1161,11 +1166,58 @@
       renderCompTable(components);
       document.getElementById("licPanel").style.display = "block";
       document.getElementById("lic-count").textContent = licenses.length;
-      renderLicTable(licenses);
+      renderLicTable(licenses, scancode_summary);
     }
 
     function renderSeverityChart(s) {
       if (sevChart) sevChart.destroy();
+
+      const total = s.critical + s.high + s.medium + s.low;
+
+      // Show placeholder when no vulns found
+      if (total === 0) {
+        sevChart = new Chart(document.getElementById("severityChart").getContext("2d"), {
+          type: "doughnut",
+          data: {
+            labels: ["No vulnerabilities found"],
+            datasets: [{
+              data: [1],
+              backgroundColor: ["#21262d"],
+              borderColor: "#161b22",
+              borderWidth: 3,
+            }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false, cutout: "65%",
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: () => " No vulnerabilities detected"
+                }
+              }
+            }
+          }
+        });
+        // Draw center text
+        const canvas = document.getElementById("severityChart");
+        const ctx2   = canvas.getContext("2d");
+        Chart.register({
+          id: "centerText",
+          afterDraw(chart) {
+            const { width, height, ctx } = chart;
+            ctx.save();
+            ctx.font         = "bold 13px var(--font)";
+            ctx.fillStyle    = "var(--text3)";
+            ctx.textAlign    = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("No vulns", width / 2, height / 2);
+            ctx.restore();
+          }
+        });
+        return;
+      }
+
       sevChart = new Chart(document.getElementById("severityChart").getContext("2d"), {
         type: "doughnut",
         data: {
@@ -1173,12 +1225,19 @@
           datasets: [{
             data: [s.critical, s.high, s.medium, s.low],
             backgroundColor: ["#ff7b72", "#f85149", "#d29922", "#3fb950"],
-            borderColor: "#161b22", borderWidth: 3, hoverOffset: 6
+            borderColor: "#161b22",
+            borderWidth: 3,
+            hoverOffset: 6,
           }]
         },
         options: {
           responsive: true, maintainAspectRatio: false, cutout: "65%",
-          plugins: { legend: { display: false } }
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw}` }
+            }
+          }
         }
       });
     }
@@ -1255,17 +1314,34 @@
   </tr>`).join("");
     }
 
-    function renderLicTable(licenses) {
-      const tbody = document.getElementById("licBody");
-      if (!licenses.length) {
-        tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;padding:32px;color:#6e7681">No license files detected</td></tr>`;
-        return;
-      }
-      tbody.innerHTML = licenses.map(l => `<tr>
-    <td class="name-cell">${escHtml(l.component || l.file || "—")}</td>
-    <td><code style="font-size:12px;color:var(--text2)">${escHtml(l.license)}</code></td>
-    <td><span class="badge risk-${(l.risk || "MEDIUM").toLowerCase()}">${escHtml(l.risk || "MEDIUM")}</span></td>
-  </tr>`).join("");
+    function renderLicTable(licenses, scancodeSum) {
+        // Gate badge
+        const gate = document.getElementById("sc-gate");
+        if (scancodeSum) {
+          const gateColors = {pass:"var(--green-bg)|var(--green)", review:"var(--amber-bg)|var(--amber)", fail:"var(--red-bg)|var(--red)", unknown:"var(--surface2)|var(--text3)"};
+          const [bg, color] = (gateColors[scancodeSum.gate_status] || gateColors.unknown).split("|");
+          gate.style.background = bg;
+          gate.style.color = color;
+          gate.textContent = `Gate: ${scancodeSum.gate_status?.toUpperCase()} · ${scancodeSum.fail} fail · ${scancodeSum.review} review`;
+          gate.style.display = "inline-block";
+        }
+
+        const tbody = document.getElementById("licBody");
+        if (!licenses.length) {
+          tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:32px;color:#6e7681">No license data detected</td></tr>`;
+          return;
+        }
+        tbody.innerHTML = licenses.map(l => {
+          const riskCls = (l.risk||"MEDIUM").toLowerCase();
+          const reasons = (l.reasons||[]).join("; ") || "—";
+          return `<tr>
+            <td class="name-cell" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(l.file||'')}">${escHtml(l.file||"—")}</td>
+            <td class="version-cell">${escHtml(l.component||"—")}</td>
+            <td><code style="font-size:12px;color:var(--text2)">${escHtml(l.license||"NOT_DETECTED")}</code></td>
+            <td><span class="badge risk-${riskCls}">${escHtml(l.risk||"MEDIUM")}</span></td>
+            <td style="font-size:12px;color:var(--text3);max-width:200px">${escHtml(reasons.substring(0,80))}${reasons.length>80?"…":""}</td>
+          </tr>`;
+        }).join("");
     }
 
     function exportSBOM() {
